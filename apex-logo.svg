@@ -1,0 +1,106 @@
+<svg xmlns="http://w3.org" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background & Shield Gradients -->
+    <radialGradient id="bgGlow" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#143822" />
+      <stop offset="65%" stop-color="#090d0b" />
+      <stop offset="100%" stop-color="#040605" />
+    </radialGradient>
+
+    <linearGradient id="neonGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4ade80" />
+      <stop offset="50%" stop-color="#22c55e" />
+      <stop offset="100%" stop-color="#15803d" />
+    </linearGradient>
+
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#fde047" />
+      <stop offset="50%" stop-color="#eab308" />
+      <stop offset="100%" stop-color="#ca8a04" />
+    </linearGradient>
+
+    <linearGradient id="silverText" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="55%" stop-color="#e2e8f0" />
+      <stop offset="100%" stop-color="#94a3b8" />
+    </linearGradient>
+
+    <!-- Neon Glow Filter -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Outer Dark Circular/Hex Frame -->
+  <rect width="512" height="512" rx="96" fill="url(#bgGlow)" />
+
+  <!-- Outer Esports Shield Crest -->
+  <path d="M256 36 L432 104 L408 312 L256 468 L104 312 L80 104 Z"
+        fill="#0b120e" stroke="url(#neonGreen)" stroke-width="10" stroke-linejoin="round" filter="url(#glow)" />
+
+  <!-- Inner Gold Trim Shield -->
+  <path d="M256 56 L412 116 L390 302 L256 444 L122 302 L100 116 Z"
+        fill="none" stroke="url(#goldAccent)" stroke-width="3" stroke-opacity="0.85" stroke-linejoin="round" />
+
+  <!-- Geometric Cyber Panther / Apex Emblem -->
+  <g transform="translate(0, -14)">
+    <!-- Ears / Crown Spikes -->
+    <polygon points="172,140 198,96 224,138" fill="#16241c" stroke="url(#neonGreen)" stroke-width="4" stroke-linejoin="round" />
+    <polygon points="340,140 314,96 288,138" fill="#16241c" stroke="url(#neonGreen)" stroke-width="4" stroke-linejoin="round" />
+    <polygon points="256,88 272,126 256,118 240,126" fill="url(#goldAccent)" />
+
+    <!-- Head Armor Plates -->
+    <polygon points="168,144 256,124 344,144 362,216 318,282 256,306 194,282 150,216"
+             fill="#111a15" stroke="url(#neonGreen)" stroke-width="5" stroke-linejoin="round" />
+    
+    <!-- Cheek & Brow Sharp Facets -->
+    <polyline points="168,144 216,188 256,174 296,188 344,144"
+              fill="none" stroke="#4ade80" stroke-width="3" stroke-opacity="0.7" />
+    <polyline points="150,216 202,228 228,274"
+              fill="none" stroke="url(#goldAccent)" stroke-width="3" />
+    <polyline points="362,216 310,228 284,274"
+              fill="none" stroke="url(#goldAccent)" stroke-width="3" />
+
+    <!-- Glowing Fierce Eyes -->
+    <polygon points="188,194 234,206 222,220 184,208" fill="url(#goldAccent)" filter="url(#glow)" />
+    <polygon points="324,194 278,206 290,220 328,208" fill="url(#goldAccent)" filter="url(#glow)" />
+
+    <!-- Nose & Fangs -->
+    <polygon points="242,238 270,238 256,256" fill="url(#neonGreen)" />
+    <polygon points="224,268 236,294 244,272" fill="#ffffff" />
+    <polygon points="288,268 276,294 268,272" fill="#ffffff" />
+  </g>
+
+  <!-- Banner Plate Behind Text -->
+  <polygon points="56,330 456,330 436,396 256,422 76,396"
+           fill="#070b09" stroke="url(#goldAccent)" stroke-width="4" stroke-linejoin="round" />
+
+  <!-- Guild Name: 么・APEX・么 -->
+  <text x="256" y="378"
+        text-anchor="middle"
+        font-family="'Segoe UI', Roboto, Arial, sans-serif"
+        font-weight="900"
+        font-size="42"
+        letter-spacing="2"
+        fill="url(#silverText)"
+        stroke="#040605"
+        stroke-width="2"
+        paint-order="stroke">
+    <tspan fill="#4ade80">么・</tspan>APEX<tspan fill="#4ade80">・么</tspan>
+  </text>
+
+  <!-- Bottom Tagline -->
+  <text x="256" y="405"
+        text-anchor="middle"
+        font-family="'Segoe UI', Roboto, Arial, sans-serif"
+        font-weight="700"
+        font-size="13"
+        letter-spacing="4"
+        fill="#eab308">
+    OFFICIAL GUILD
+  </text>
+</svg>
