@@ -6,7 +6,6 @@ const app = express();
 app.use(express.json());
 
 // 1. Initialize Firebase Admin
-// Paste your Firebase Service Account JSON into the FIREBASE_SERVICE_ACCOUNT env variable on Render
 if (process.env.FIREBASE_SERVICE_ACCOUNT) {
   const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
   admin.initializeApp({
@@ -14,8 +13,8 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT) {
   });
 }
 
-// 2. Serve your frontend files from the "public" folder
-app.use(express.static(path.join(__dirname, "public")));
+// 2. Serve your frontend files from the ROOT folder
+app.use(express.static(__dirname));
 
 // 3. Route to set Admin Claim
 app.get("/api/setAdmin", async (req, res) => {
@@ -66,7 +65,7 @@ app.get("/api/garena/:endpoint", async (req, res) => {
   }
 });
 
-// 5. Catch-all to serve index.html for navigation
+// 5. Catch-all to serve index.html from the ROOT folder
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
