@@ -21,8 +21,8 @@ const db = getFirestore(app);
 // GLOBAL SETTINGS
 // ==========================================
 const GUILD_ID = "3107592050";
-const WA_NUMBER = "910000000000"; // CHANGE THIS TO YOUR WHATSAPP NUMBER
-const WA_GROUP_URL = `https://wa.me/${WA_NUMBER}`;
+const WA_NUMBER = "+2349125129006"; // CHANGE THIS TO YOUR WHATSAPP NUMBER
+const WA_GROUP_URL = "https://chat.whatsapp.com/EwjEk3s0K3JLGivx7vFgBz"; // Change to your group link
 const DISCORD_URL = "https://discord.gg/HVAQGpfPm"; // YOUR DISCORD LINK
 
 // --- UTILITIES ---
@@ -286,13 +286,10 @@ if (document.getElementById("login-form")) {
       
       const updates = {};
       
-      // Look specifically for GamesKinbo's structure
       if (json.AccountInfo) {
         if (json.AccountInfo.AccountName) updates.ign = json.AccountInfo.AccountName;
         if (json.AccountInfo.AccountLevel) updates.level = json.AccountInfo.AccountLevel;
-      } 
-      // Fallback for other API providers
-      else {
+      } else {
         const info = json.data?.basicInfo || json.basicInfo || json.data || json;
         if (info.nickname) updates.ign = info.nickname;
         if (info.level) updates.level = info.level;
