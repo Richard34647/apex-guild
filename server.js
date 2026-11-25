@@ -13,7 +13,7 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT) {
   });
 }
 
-// 2. Serve your frontend files from the ROOT folder
+// 2. Serve frontend files
 app.use(express.static(__dirname));
 
 // 3. Route to set Admin Claim
@@ -33,19 +33,20 @@ app.get("/api/setAdmin", async (req, res) => {
   }
 });
 
-// 4. Route to Proxy Garena API
+// 4. Route to Proxy GamesKinbo API
 app.get("/api/garena/:endpoint", async (req, res) => {
   const apiKey = process.env.GARENA_API_KEY;
-  const baseUrl = process.env.GARENA_BASE_URL;
+  // Hardcoded correct endpoint for GamesKinbo
+  const baseUrl = "https://api.gameskinbo.com"; 
+  const endpoint = "ff-info/get"; // GamesKinbo's specific endpoint
 
-  if (!apiKey || !baseUrl) {
-    return res.status(500).json({ error: "Garena API env vars missing." });
+  if (!apiKey) {
+    return res.status(500).json({ error: "GARENA_API_KEY missing." });
   }
 
-  const endpointMap = { player: "info", clan: "clan", guild: "clan" };
-  const endpoint = endpointMap[req.params.endpoint] || req.params.endpoint;
-
-  const upstream = new URL(baseUrl.replace(/\/+$/, "") + "/" + endpoint);
+  const upstream = new URL(`${baseUrl}/${endpoint}`);
+  
+  // Pass query parameters (region, uid)
   Object.entries(req.query).forEach(([k, v]) => {
     upstream.searchParams.set(k, String(v));
   });
@@ -53,19 +54,29 @@ app.get("/api/garena/:endpoint", async (req, res) => {
   try {
     const response = await fetch(upstream.toString(), {
       headers: {
-        "x-api-key": apiKey,
-        "Authorization": `Bearer ${apiKey}`,
+        "x-api-key": apiKey, // GamesKinbo requires this exact header
         "Accept": "application/json"
       }
     });
-    const data = await response.json();
-    res.status(response.status).json(data);
+    
+    // Check if GamesKinbo returned HTML (error page)
+    const text = await response.text();
+    try {
+      const data = JSON.parse(text);
+      res.status(response.status).json(data);
+    } catch (parseError) {
+      // If it's not JSON, send a helpful error
+      res.status(500).json({ 
+        error: "GamesKinbo returned HTML instead of JSON. Check your API key and endpoint.",
+        raw: text.substring(0, 100) // Show a snippet of the HTML error
+      });
+    }
   } catch (err) {
     res.status(502).json({ error: "Upstream failed", detail: err.message });
   }
 });
 
-// 5. Catch-all to serve index.html from the ROOT folder
+// 5. Catch-all to serve index.html
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
