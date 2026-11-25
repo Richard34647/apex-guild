@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>么・APEX・么 | Official Free Fire Guild</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="nav-container">
+      <div class="brand">么・APEX・么</div>
+      <nav class="nav-links">
+        <a href="#perks">Perks</a>
+        <a href="#leadership">Leadership</a>
+        <a href="/members.html">Members</a>
+        <a href="#apply">Apply</a>
+        <a href="/admin.html">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="hero">
+    <div class="logo-wrap">
+      <img src="/logo.png" alt="Logo" onerror="this.style.display='none'; this.parentElement.innerHTML='<span style=\'color:#39ff14;font-weight:900;font-size:1.3rem;\'>么・APEX・么</span>';" />
+    </div>
+    <div class="badge">OFFICIAL FREE FIRE GUILD</div>
+    <h1>么・APEX・么</h1>
+    <p class="slogan">Aim for the top. 么</p>
+
+    <div class="guild-id-box">
+      <span class="guild-id-label">GUILD ID:</span>
+      <span class="guild-id-value" id="guildIdText">3107592050</span>
+      <button class="btn-copy" onclick="copyGuildId()">Copy Guild ID</button>
+    </div>
+  </div>
+
+  <section id="announcements">
+    <h2 class="section-title">Latest <span>Announcements</span></h2>
+    <div class="announce-list" id="announce-list"><div class="empty-state">Loading...</div></div>
+  </section>
+
+  <section id="perks">
+    <h2 class="section-title">Guild <span>Perks & Rules</span></h2>
+    <div class="grid-3">
+      <div class="card"><h3>🎯 Weekly Custom Rooms</h3><p>Regular 1v1s, 4v4 Clash Squad scrims, and fun community rooms.</p></div>
+      <div class="card"><h3>🏆 Rank Push & Guild Wars</h3><p>Squad up for Clash Squad Ranked, Battle Royale, and weekly Guild Wars.</p></div>
+      <div class="card"><h3>💯 100 Honor Score Rule</h3><p>Play with good network and enough data. Never quit or go AFK.</p></div>
+    </div>
+    <div class="tag-banner">
+      <strong>🪪 Optional Member Name Tag:</strong> Add <span class="tag-code">么・</span> or <span class="tag-code">APX・</span> before your IGN!
+    </div>
+  </section>
+
+  <section id="apply">
+    <h2 class="section-title">Join the <span>Squad</span></h2>
+    <p class="section-sub">Submit the form. You'll get the Guild ID instantly.</p>
+
+    <div id="apply-form-wrap">
+      <div class="form-card">
+        <form id="applyForm">
+          <div class="form-group"><label>Free Fire IGN *</label><input type="text" name="ign" required /></div>
+          <div class="form-group"><label>Free Fire UID *</label><input type="text" name="uid" required /></div>
+          <div class="form-group"><label>Account Level *</label><input type="number" name="level" min="1" max="100" required /></div>
+          <div class="form-group">
+            <label>Region *</label>
+            <select name="region" required>
+              <option value="">Select region</option><option>SG</option><option>IND</option><option>ID</option><option>BR</option><option>NA</option><option>EU</option><option>RU</option><option>MENA</option><option>PK</option><option>BD</option><option>TH</option><option>VN</option><option>MY</option><option>ME</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Preferred Role *</label>
+            <select name="role" required>
+              <option value="">Select role</option><option>Rusher</option><option>Sniper</option><option>Support</option><option>IGL / Strategist</option><option>Flexible</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Optional Name Tag</label>
+            <select name="nameTag"><option value="none">No tag</option><option value="么・">么・</option><option value="APX・">APX・</option></select>
+          </div>
+          <div class="form-group"><label>Anything else? (optional)</label><textarea name="notes" rows="3"></textarea></div>
+          <button type="submit" class="btn-submit">🚀 Submit Application</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="apply-success" class="success-card" style="display:none">
+      <div class="success-icon">🎉</div>
+      <h2>Welcome to the squad!</h2>
+      <p>Application saved, <span class="success-hello" id="successHello">player</span>. Your guild is set to <strong>Auto-Approval</strong>.</p>
+      <div class="guild-id-showcase">
+        <div class="label">Your Guild ID</div>
+        <div class="value" id="successGuildId">3107592050</div>
+        <button class="copy-btn" onclick="copySuccessId(this)">📋 Copy Guild ID</button>
+      </div>
+      <div class="steps">
+        <h3>How to join</h3>
+        <ol>
+          <li>Open <strong>Free Fire</strong></li>
+          <li>Go to <strong>Guild</strong> → <strong>Search Guild</strong></li>
+          <li>Paste the Guild ID and tap <strong>Join</strong></li>
+        </ol>
+      </div>
+      <div class="success-socials">
+        <a class="social-btn wa-btn" id="successWaBtn" href="#" target="_blank">💬 Join WhatsApp Group</a>
+        <a class="social-btn" id="successDiscordBtn" href="#" target="_blank">🎮 Join Discord</a>
+      </div>
+      <button class="success-reset" onclick="resetApplyForm()">Submit another application</button>
+    </div>
+  </section>
+
+  <footer>© 2026 么・APEX・么 · <a href="/tos.html">Terms</a> · <a href="/privacy.html">Privacy</a></footer>
+  <div class="toast" id="toast"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
