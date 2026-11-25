@@ -2,7 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, doc, updateDoc, deleteDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// --- FIREBASE CONFIG (Replace with your actual config) ---
+// --- FIREBASE CONFIG ---
 const firebaseConfig = {
   apiKey: "AIzaSyCxw4GVzpqaymRE4c38eHHxpzFjyA6TyMk",
   authDomain: "a-p-e-x.firebaseapp.com",
@@ -276,20 +276,38 @@ if (document.getElementById("login-form")) {
   };
   window.delMember = async (id) => { if(confirm("Remove from roster?")) { await deleteDoc(doc(db, "members", id)); loadAdminData(); } };
   
+  // --- UPDATED FOR GAMESKINBO API ---
   window.refreshGarena = async (id, uid, region) => {
     if(!uid || !region) return showToast("Missing UID or Region");
     showToast("Fetching...");
     try {
       const res = await fetch(`/api/garena/player?region=${encodeURIComponent(region)}&uid=${encodeURIComponent(uid)}`);
       const json = await res.json();
-      const info = json.data?.basicInfo || json.basicInfo || json.data || json;
+      
       const updates = {};
-      if (info.nickname) updates.ign = info.nickname;
-      if (info.level) updates.level = info.level;
-      if (!Object.keys(updates).length) return showToast("No data found");
+      
+      // Look specifically for GamesKinbo's structure
+      if (json.AccountInfo) {
+        if (json.AccountInfo.AccountName) updates.ign = json.AccountInfo.AccountName;
+        if (json.AccountInfo.AccountLevel) updates.level = json.AccountInfo.AccountLevel;
+      } 
+      // Fallback for other API providers
+      else {
+        const info = json.data?.basicInfo || json.basicInfo || json.data || json;
+        if (info.nickname) updates.ign = info.nickname;
+        if (info.level) updates.level = info.level;
+      }
+
+      if (!Object.keys(updates).length) {
+        return showToast("No data found in response");
+      }
+      
       await updateDoc(doc(db, "members", id), updates);
-      showToast("Refreshed ✅"); loadAdminData();
-    } catch (err) { showToast("Error: " + err.message); }
+      showToast("Refreshed ✅"); 
+      loadAdminData();
+    } catch (err) { 
+      showToast("Error: " + err.message); 
+    }
   };
 
   document.getElementById("member-form").addEventListener("submit", async (e) => {
