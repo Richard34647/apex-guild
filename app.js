@@ -31,6 +31,9 @@ function showToast(msg) {
 function esc(str = "") {
   return String(str).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 }
+function cleanPhone(str = "") {
+  return String(str).replace(/\D/g, "");
+}
 async function copyText(text) {
   try { await navigator.clipboard.writeText(text); return true; } 
   catch { const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); return true; }
@@ -54,10 +57,13 @@ onAuthStateChanged(auth, async (user) => {
   // 2. Login Page Logic
   if (isLogin) {
     if (user) { window.location.href = "index.html"; return; }
-    document.getElementById("google-login-btn").onclick = async () => {
-      try { await signInWithPopup(auth, googleProvider); } 
-      catch (err) { document.getElementById("login-error").textContent = err.message; document.getElementById("login-error").style.display = "block"; }
-    };
+    const googleBtn = document.getElementById("google-login-btn");
+    if (googleBtn) {
+      googleBtn.onclick = async () => {
+        try { await signInWithPopup(auth, googleProvider); } 
+        catch (err) { document.getElementById("login-error").textContent = err.message; document.getElementById("login-error").style.display = "block"; }
+      };
+    }
     return;
   }
 
@@ -76,7 +82,7 @@ onAuthStateChanged(auth, async (user) => {
   } else {
     // User doc exists -> Check status
     const status = userDoc.data().status;
-    if (status === "pending") {
+    if (status === "pending" || status === "rejected") {
       if (!isPending) window.location.href = "pending.html";
       return;
     }
@@ -85,11 +91,11 @@ onAuthStateChanged(auth, async (user) => {
     }
   }
 
-  // 5. Init Page Logic (if approved)
+  // 5. Init Page Logic (if approved or onboarding)
   if (document.getElementById("guildIdText")) initHome();
   if (document.getElementById("member-grid")) initMembers();
-  if (document.getElementById("chat-messages")) initChat(user, userDoc.data());
-  if (document.getElementById("profile-name")) initProfile(user, userDoc.data());
+  if (document.getElementById("chat-messages") && userDoc.exists()) initChat(user, userDoc.data());
+  if (document.getElementById("profile-name") && userDoc.exists()) initProfile(user, userDoc.data());
   if (isOnboarding) initOnboarding(user);
 });
 
@@ -98,23 +104,29 @@ onAuthStateChanged(auth, async (user) => {
 // ==========================================
 function initOnboarding(user) {
   const form = document.getElementById("onboardingForm");
+  if (!form) return;
   const rankOptions = document.querySelectorAll(".rank-option");
   const hiddenRankInput = document.getElementById("selectedRank");
 
   rankOptions.forEach(opt => {
-    opt.addEventListener("click", () => {
+    opt.onclick = () => {
       rankOptions.forEach(o => o.classList.remove("selected"));
       opt.classList.add("selected");
       hiddenRankInput.value = opt.dataset.rank;
-    });
+    };
   });
 
-  form.addEventListener("submit", async (e) => {
+  form.onsubmit = async (e) => {
     e.preventDefault();
     const btn = document.getElementById("submit-btn");
     btn.disabled = true; btn.textContent = "Uploading Data...";
 
     try {
+      const proofFile = form.proofPic.files[0];
+      if (!proofFile) {
+        throw new Error("Please upload a proof screenshot.");
+      }
+
       let photoURL = user.photoURL || "https://via.placeholder.com/100";
       let proofURL = "";
 
@@ -127,12 +139,9 @@ function initOnboarding(user) {
       }
 
       // Upload Proof Pic (required)
-      const proofFile = form.proofPic.files[0];
-      if (proofFile) {
-        const proofRef = ref(storage, `proofs/${user.uid}_${Date.now()}`);
-        await uploadBytes(proofRef, proofFile);
-        proofURL = await getDownloadURL(proofRef);
-      }
+      const proofRef = ref(storage, `proofs/${user.uid}_${Date.now()}`);
+      await uploadBytes(proofRef, proofFile);
+      proofURL = await getDownloadURL(proofRef);
 
       // Save Application Data
       const appData = {
@@ -162,7 +171,7 @@ function initOnboarding(user) {
       showToast("Error: " + err.message);
       btn.disabled = false; btn.textContent = "Submit Application";
     }
-  });
+  };
 }
 
 // ==========================================
@@ -182,7 +191,7 @@ function initHome() {
 // PAGE: PROFILE
 // ==========================================
 function initProfile(user, data) {
-  document.getElementById("profile-avatar").src = data.photoURL;
+  document.getElementById("profile-avatar").src = data.photoURL || "https://via.placeholder.com/100";
   document.getElementById("profile-name").textContent = data.ign;
   document.getElementById("profile-email").textContent = data.email;
   document.getElementById("p-ign").textContent = data.ign;
@@ -204,15 +213,15 @@ function initChat(user, profile) {
   const q = query(collection(db, "chat"), orderBy("createdAt", "asc"), limit(50));
   onSnapshot(q, (snapshot) => {
     if (snapshot.empty) { chatBox.innerHTML = `<div class="empty-state">No messages yet.</div>`; return; }
-    chatBox.innerHTML = snapshot.docs.map(doc => {
-      const msg = doc.data();
+    chatBox.innerHTML = snapshot.docs.map(d => {
+      const msg = d.data();
       const time = msg.createdAt?.toDate ? msg.createdAt.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "";
-      return `<div class="chat-msg"><img src="${msg.photoURL}" class="chat-avatar" /><div class="chat-content"><span class="chat-time">${time}</span><div class="chat-sender">${esc(msg.senderName)}</div><div class="chat-text">${esc(msg.text)}</div></div></div>`;
+      return `<div class="chat-msg"><img src="${esc(msg.photoURL)}" class="chat-avatar" /><div class="chat-content"><span class="chat-time">${time}</span><div class="chat-sender">${esc(msg.senderName)}</div><div class="chat-text">${esc(msg.text)}</div></div></div>`;
     }).join("");
     chatBox.scrollTop = chatBox.scrollHeight;
   });
 
-  chatForm.addEventListener("submit", async (e) => {
+  chatForm.onsubmit = async (e) => {
     e.preventDefault();
     const text = chatInput.value.trim();
     if (!text) return;
@@ -224,7 +233,7 @@ function initChat(user, profile) {
       chatInput.value = "";
     } catch (err) { showToast("Error: " + err.message); } 
     finally { chatInput.disabled = false; chatInput.focus(); }
-  });
+  };
 }
 
 // ==========================================
@@ -254,26 +263,62 @@ function initMembers() {
 }
 
 // ==========================================
-// PAGE: ADMIN (Fixed Logic & New Tables)
+// PAGE: ADMIN (Tabs, Auth & Tables)
 // ==========================================
-function initAdmin(user) {
-  const checkAdmin = async (u) => { if (!u) return false; const token = await u.getIdTokenResult(true); return token.claims.admin === true; };
+async function initAdmin(user) {
+  const checkAdmin = async (u) => {
+    if (!u) return false;
+    const token = await u.getIdTokenResult(true);
+    return token.claims.admin === true;
+  };
 
-  onAuthStateChanged(auth, async (u) => {
-    if (!u) { document.getElementById("login-view").style.display = ""; document.getElementById("dash-view").style.display = "none"; return; }
-    if (!(await checkAdmin(u))) { await signOut(auth); document.getElementById("login-error").textContent = "Not an admin account."; document.getElementById("login-error").style.display = ""; return; }
-    
-    document.getElementById("login-view").style.display = "none";
-    document.getElementById("dash-view").style.display = "";
-    document.getElementById("admin-email").textContent = u.email;
-    document.getElementById("logout-btn").style.display = "block";
-    loadAdminData();
-  });
+  // Setup Login Form
+  const loginForm = document.getElementById("login-form");
+  if (loginForm) {
+    loginForm.onsubmit = async (e) => {
+      e.preventDefault();
+      try {
+        await signInWithEmailAndPassword(auth, e.target.email.value, e.target.password.value);
+      } catch (err) {
+        const errEl = document.getElementById("login-error");
+        errEl.textContent = err.message;
+        errEl.style.display = "";
+      }
+    };
+  }
 
-  document.getElementById("login-form")?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    try { await signInWithEmailAndPassword(auth, e.target.email.value, e.target.password.value); } 
-    catch (err) { document.getElementById("login-error").textContent = err.message; document.getElementById("login-error").style.display = ""; }
+  // Verify Admin Session
+  if (!user) {
+    document.getElementById("login-view").style.display = "";
+    document.getElementById("dash-view").style.display = "none";
+    document.getElementById("logout-btn").style.display = "none";
+    return;
+  }
+
+  if (!(await checkAdmin(user))) {
+    await signOut(auth);
+    const errEl = document.getElementById("login-error");
+    errEl.textContent = "Not an admin account.";
+    errEl.style.display = "";
+    return;
+  }
+
+  document.getElementById("login-view").style.display = "none";
+  document.getElementById("dash-view").style.display = "";
+  document.getElementById("admin-email").textContent = user.email;
+  document.getElementById("logout-btn").style.display = "block";
+
+  // Setup Tab Switching
+  document.querySelectorAll(".tab").forEach(tab => {
+    tab.onclick = () => {
+      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      document.querySelectorAll(".tab-panel").forEach(panel => {
+        panel.style.display = "none";
+      });
+      const targetPanel = document.getElementById(tab.dataset.target);
+      if (targetPanel) targetPanel.style.display = "block";
+    };
   });
 
   function loadAdminData() {
@@ -284,16 +329,16 @@ function initAdmin(user) {
       tbody.innerHTML = snap.docs.map(d => {
         const a = d.data();
         return `<tr>
-          <td><img src="${a.photoURL}" style="width:40px;height:40px;border-radius:50%"></td>
+          <td><img src="${esc(a.photoURL)}" style="width:40px;height:40px;border-radius:50%"></td>
           <td><strong>${esc(a.ign)}</strong><br><small>${esc(a.uid)}</small></td>
-          <td><a href="https://wa.me/${esc(a.whatsapp)}" target="_blank" class="btn" style="font-size:0.7rem;padding:4px 8px;">Chat</a></td>
+          <td><a href="https://wa.me/${cleanPhone(a.whatsapp)}" target="_blank" class="btn" style="font-size:0.7rem;padding:4px 8px;">Chat</a></td>
           <td>${esc(a.rank)}</td>
-          <td class="status-${a.status}">${a.status}</td>
-          <td><a href="${a.proofURL}" target="_blank"><img src="${a.proofURL}" class="proof-img" title="Click to view proof"></a></td>
+          <td class="status-${esc(a.status)}">${esc(a.status)}</td>
+          <td><a href="${esc(a.proofURL)}" target="_blank"><img src="${esc(a.proofURL)}" class="proof-img" title="Click to view proof"></a></td>
           <td>
             <div class="row-actions">
-              ${a.status === "pending" ? `<button class="btn" onclick="window.approveApp('${d.id}')">Approve</button>` : ""}
-              <button class="btn-danger btn" onclick="window.delApp('${d.id}')">Delete</button>
+              ${a.status === "pending" ? `<button class="btn" onclick="window.approveApp('${esc(d.id)}')">Approve</button>` : ""}
+              <button class="btn-danger btn" onclick="window.delApp('${esc(d.id)}')">Delete</button>
             </div>
           </td>
         </tr>`;
@@ -309,13 +354,13 @@ function initAdmin(user) {
         return `<tr>
           <td>${esc(m.ign)}</td>
           <td><strong>${esc(m.role)}</strong></td>
-          <td><a href="https://wa.me/${esc(m.whatsapp)}" target="_blank" class="btn wa-btn" style="font-size:0.7rem;padding:4px 8px;">Chat</a></td>
+          <td><a href="https://wa.me/${cleanPhone(m.whatsapp)}" target="_blank" class="btn wa-btn" style="font-size:0.7rem;padding:4px 8px;">Chat</a></td>
           <td>${esc(m.uid)}</td>
           <td>${esc(m.region)}</td>
           <td>
             <div class="row-actions">
-              <button class="btn-secondary btn" onclick="window.promoteMember('${d.id}', 'officer')">Make Officer</button>
-              <button class="btn-danger btn" onclick="window.delMember('${d.id}', '${m.authUid}')">Delete</button>
+              <button class="btn-secondary btn" onclick="window.promoteMember('${esc(d.id)}', 'officer')">Make Officer</button>
+              <button class="btn-danger btn" onclick="window.delMember('${esc(d.id)}', '${esc(m.authUid)}')">Delete</button>
             </div>
           </td>
         </tr>`;
@@ -325,16 +370,17 @@ function initAdmin(user) {
     // 3. Load Announcements
     getDocs(query(collection(db, "announcements"), orderBy("createdAt", "desc"))).then(snap => {
       const list = document.getElementById("announcements-list");
+      if (snap.empty) { list.innerHTML = `<div class="empty-state">No announcements yet.</div>`; return; }
       list.innerHTML = snap.docs.map(d => `
         <div class="announce" style="margin-bottom:12px">
-          <h3>${esc(d.data().title)}</h3><p>${esc(d.data().body)}</p>
-          <button class="btn-danger btn" style="margin-top:10px" onclick="window.delAnn('${d.id}')">Delete</button>
+          <h3>${esc(d.data().title)}</h3><p>${esc(d.data().body).replace(/\n/g, "<br>")}</p>
+          <button class="btn-danger btn" style="margin-top:10px" onclick="window.delAnn('${esc(d.id)}')">Delete</button>
         </div>
       `).join("");
     });
   }
 
-  // --- ACTIONS ---
+  // --- ADMIN ACTIONS ---
   window.approveApp = async (id) => {
     if (!confirm("Approve this player?")) return;
     const appSnap = await getDoc(doc(db, "applications", id));
@@ -354,7 +400,8 @@ function initAdmin(user) {
     // 3. Delete the application
     await deleteDoc(doc(db, "applications", id));
     
-    showToast("Approved and added to roster!"); loadAdminData();
+    showToast("Approved and added to roster!");
+    loadAdminData();
   };
 
   window.promoteMember = async (id, role) => {
@@ -362,23 +409,48 @@ function initAdmin(user) {
     await updateDoc(doc(db, "members", id), { role: role });
     const member = (await getDoc(doc(db, "members", id))).data();
     await updateDoc(doc(db, "users", member.authUid), { role: role });
-    showToast("Role updated!"); loadAdminData();
+    showToast("Role updated!");
+    loadAdminData();
   };
 
-  window.delApp = async (id) => { if(confirm("Delete?")) { await deleteDoc(doc(db, "applications", id)); loadAdminData(); } };
+  window.delApp = async (id) => {
+    if (confirm("Delete this application?")) {
+      await deleteDoc(doc(db, "applications", id));
+      loadAdminData();
+    }
+  };
+
   window.delMember = async (id, authUid) => { 
-    if(confirm("Remove from roster?")) { 
+    if (confirm("Remove from roster?")) { 
       await deleteDoc(doc(db, "members", id)); 
       await updateDoc(doc(db, "users", authUid), { status: "rejected" });
       loadAdminData(); 
     } 
   };
-  window.delAnn = async (id) => { if(confirm("Delete?")) { await deleteDoc(doc(db, "announcements", id)); loadAdminData(); } };
 
-  // Forms
-  document.getElementById("announce-form")?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    await addDoc(collection(db, "announcements"), { title: e.target.title.value, body: e.target.body.value, author: auth.currentUser.email, createdAt: serverTimestamp() });
-    e.target.reset(); showToast("Posted!"); loadAdminData();
-  });
+  window.delAnn = async (id) => {
+    if (confirm("Delete this announcement?")) {
+      await deleteDoc(doc(db, "announcements", id));
+      loadAdminData();
+    }
+  };
+
+  // Announcement Form
+  const announceForm = document.getElementById("announce-form");
+  if (announceForm) {
+    announceForm.onsubmit = async (e) => {
+      e.preventDefault();
+      await addDoc(collection(db, "announcements"), {
+        title: e.target.title.value,
+        body: e.target.body.value,
+        author: auth.currentUser.email,
+        createdAt: serverTimestamp()
+      });
+      e.target.reset();
+      showToast("Posted!");
+      loadAdminData();
+    };
+  }
+
+  loadAdminData();
 }
