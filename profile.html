@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Profile · 么・APEX・么</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="nav-container">
+      <div class="brand">么・APEX・么</div>
+      <nav class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="chat.html">Chat</a>
+        <a href="profile.html">Profile</a>
+        <a href="#" id="logout-btn">Logout</a>
+      </nav>
+    </div>
+  </header>
+
+  <section style="padding-top: 40px;">
+    <div class="form-card" style="text-align: center;">
+      <img id="profile-avatar" src="https://via.placeholder.com/100" style="width: 100px; height: 100px; border-radius: 50%; border: 3px solid var(--green); margin-bottom: 15px;" />
+      <h2 id="profile-name" style="margin-bottom: 5px;">Loading...</h2>
+      <p id="profile-email" style="color: var(--muted); margin-bottom: 20px;"></p>
+
+      <div class="grid-3" style="text-align: left; margin-top: 20px;">
+        <div class="card"><h3>IGN</h3><p id="p-ign">-</p></div>
+        <div class="card"><h3>UID</h3><p id="p-uid">-</p></div>
+        <div class="card"><h3>Level</h3><p id="p-level">-</p></div>
+        <div class="card"><h3>Region</h3><p id="p-region">-</p></div>
+        <div class="card"><h3>Rank</h3><p id="p-rank">-</p></div>
+        <div class="card"><h3>Role</h3><p id="p-role">-</p></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="toast" id="toast"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
