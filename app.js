@@ -22,7 +22,7 @@ const googleProvider = new GoogleAuthProvider();
 // --- SUPABASE CONFIG (File Storage) ---
 const SUPABASE_URL = "https://gwzhifnghmrnvkcnjgip.supabase.co";
 const SUPABASE_KEY = "sb_publishable_x5taeM5x-1gNQH5oeIqhNA_wm33ZEYK";
-const SUPABASE_BUCKET = "guild-uploads";
+const SUPABASE_BUCKET = "codewix";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 async function uploadToSupabase(file, folder, uid) {
