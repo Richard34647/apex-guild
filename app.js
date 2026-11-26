@@ -17,7 +17,7 @@ const firebaseConfig = {
 // Note: Make sure SUPABASE_BUCKET matches your exact bucket name in Supabase Storage
 const SUPABASE_URL = "https://gwzhifnghmrnvkcnjgip.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_x5taeM5x-1gNQH5oeIqhNA_wm33ZEYK";
-const SUPABASE_BUCKET = "codewix";
+const SUPABASE_BUCKET = "Codewix";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
