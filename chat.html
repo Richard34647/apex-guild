@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guild Chat · 么・APEX・么</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="nav-container">
+      <div class="brand">么・APEX・么</div>
+      <nav class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="members.html">Members</a>
+        <a href="chat.html">Chat</a>
+        <a href="profile.html">Profile</a>
+        <a href="#" id="logout-btn">Logout</a>
+      </nav>
+    </div>
+  </header>
+
+  <section style="padding-top: 40px;">
+    <h2 class="section-title">Guild <span>Chat</span></h2>
+    <p class="section-sub">Talk with the squad in real-time.</p>
+
+    <div class="chat-container">
+      <div class="chat-messages" id="chat-messages">
+        <div class="empty-state">Connecting...</div>
+      </div>
+      <form id="chat-form" class="chat-input-area">
+        <input type="text" id="chat-input" placeholder="Type a message..." maxlength="500" required autocomplete="off" />
+        <button type="submit" class="btn-submit" style="width:auto; margin:0;">Send</button>
+      </form>
+    </div>
+  </section>
+
+  <div class="toast" id="toast"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
