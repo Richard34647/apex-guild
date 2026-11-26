@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>么・APEX・么 · Official Free Fire Guild</title>
+  <meta name="description" content="Official portal for 么・APEX・么 Free Fire Guild. Check requirements, view our competitive standards, and apply to join the roster." />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .hero {
+      text-align: center;
+      padding: 80px 20px 60px;
+      max-width: 820px;
+      margin: 0 auto;
+    }
+    .hero-badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(57, 255, 20, 0.1);
+      border: 1px solid rgba(57, 255, 20, 0.35);
+      color: var(--green);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.4rem);
+      line-height: 1.1;
+      margin-bottom: 16px;
+      font-weight: 800;
+    }
+    .hero h1 span {
+      color: var(--green);
+    }
+    .hero p {
+      color: var(--muted);
+      font-size: 1.05rem;
+      max-width: 600px;
+      margin: 0 auto 30px;
+      line-height: 1.6;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn-primary {
+      background: var(--green);
+      color: #05070a;
+      font-weight: 800;
+      padding: 13px 26px;
+      border-radius: 10px;
+      text-decoration: none;
+      transition: 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      border: none;
+      font-size: 0.95rem;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 20px rgba(57, 255, 20, 0.35);
+    }
+    .btn-outline {
+      background: var(--card-2);
+      color: var(--text, #fff);
+      border: 1px solid var(--border);
+      font-weight: 700;
+      padding: 13px 24px;
+      border-radius: 10px;
+      text-decoration: none;
+      transition: 0.2s;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+    .btn-outline:hover {
+      border-color: var(--green);
+      color: var(--green);
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 18px;
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .feature-card {
+      background: var(--card-2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      transition: 0.2s;
+    }
+    .feature-card:hover {
+      border-color: rgba(57, 255, 20, 0.45);
+      transform: translateY(-2px);
+    }
+    .feature-icon {
+      font-size: 1.6rem;
+      margin-bottom: 12px;
+      display: block;
+    }
+    .feature-card h3 {
+      font-size: 1.05rem;
+      margin-bottom: 8px;
+    }
+    .feature-card p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .req-box {
+      max-width: 1000px;
+      margin: 40px auto 70px;
+      padding: 0 20px;
+    }
+    .req-inner {
+      background: var(--card-2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 24px;
+    }
+    .req-list {
+      list-style: none;
+      padding: 0;
+      margin: 14px 0 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 10px 24px;
+    }
+    .req-list li {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    .req-list li strong {
+      color: var(--green);
+    }
+    footer {
+      text-align: center;
+      padding: 28px 20px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="nav-container">
+      <a href="index.html" class="brand" style="text-decoration:none;">么・APEX・么</a>
+      <nav class="nav-links" id="landing-nav">
+        <a href="#about">About</a>
+        <a href="#requirements">Requirements</a>
+        <a href="login.html" id="nav-auth-btn" class="btn" style="padding:6px 14px;">Member Login</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <span class="hero-badge">Competitive Free Fire Guild · ID: 3107592050</span>
+      <h1>Welcome to <span>么・APEX・么</span></h1>
+      <p>
+        Built for disciplined rushers, sharp snipers, and active team players. 
+        Climb ranked, dominate guild wars, and coordinate with the squad inside our private member hub.
+      </p>
+      <div class="hero-actions">
+        <a href="login.html" id="hero-primary-btn" class="btn-primary">Apply to Join Guild</a>
+        <button type="button" onclick="window.copyGuildId()" class="btn-outline">Copy Guild ID: 3107592050</button>
+      </div>
+    </section>
+
+    <section id="about" class="features-grid">
+      <div class="feature-card">
+        <span class="feature-icon">🔥</span>
+        <h3>Active Guild Wars & Scrims</h3>
+        <p>Weekly custom room scrims, tournament rosters, and coordinated rank-pushing squads every evening.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">💬</span>
+        <h3>Private Member Hub</h3>
+        <p>Approved members unlock live squad chat, official guild announcements, and the full verified roster.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🏆</span>
+        <h3>Merit-Based Promotions</h3>
+        <p>Consistent activity, sportsmanship, and tournament performance earn promotions to Officer and Co-Leader.</p>
+      </div>
+    </section>
+
+    <section id="requirements" class="req-box">
+      <div class="req-inner">
+        <div style="flex: 1; min-width: 260px;">
+          <h2 class="section-title" style="margin-bottom: 6px;">Recruitment <span>Requirements</span></h2>
+          <p class="section-sub" style="margin-bottom: 0;">Make sure you meet these standards before submitting your proof screenshot.</p>
+          <ul class="req-list">
+            <li><strong>✔ Active Player:</strong> Daily login & guild dog-tag contribution</li>
+            <li><strong>✔ Proof Required:</strong> Clear screenshot of your Free Fire profile</li>
+            <li><strong>✔ Communication:</strong> Active WhatsApp for match callouts</li>
+            <li><strong>✔ Respect:</strong> Zero toxicity or cheating tolerated</li>
+          </ul>
+        </div>
+        <div>
+          <a href="login.html" id="req-cta-btn" class="btn-primary">Start Application →</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    么・APEX・么 Guild · All Rights Reserved
+  </footer>
+
+  <div class="toast" id="toast"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

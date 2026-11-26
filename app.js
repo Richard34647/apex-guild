@@ -1,9 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, doc, updateDoc, deleteDoc, getDoc, setDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-// --- FIREBASE CONFIG (Auth & Firestore) ---
+// --- FIREBASE CONFIG ---
 const firebaseConfig = {
   apiKey: "AIzaSyCxw4GVzpqaymRE4c38eHHxpzFjyA6TyMk",
   authDomain: "a-p-e-x.firebaseapp.com",
@@ -14,38 +13,16 @@ const firebaseConfig = {
   measurementId: "G-7S6MHE6WXF"
 };
 
+// --- SUPABASE STORAGE CONFIG ---
+// Note: Make sure SUPABASE_BUCKET matches your exact bucket name in Supabase Storage
+const SUPABASE_URL = "https://gwzhifnghmrnvkcnjgip.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_x5taeM5x-1gNQH5oeIqhNA_wm33ZEYK";
+const SUPABASE_BUCKET = "codewix";
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
-
-// --- SUPABASE CONFIG (File Storage) ---
-const SUPABASE_URL = "https://gwzhifnghmrnvkcnjgip.supabase.co";
-const SUPABASE_KEY = "sb_publishable_x5taeM5x-1gNQH5oeIqhNA_wm33ZEYK";
-const SUPABASE_BUCKET = "Codewix";
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-async function uploadToSupabase(file, folder, uid) {
-  const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const filePath = `${folder}/${uid}_${Date.now()}_${cleanName}`;
-
-  const { error } = await supabase.storage
-    .from(SUPABASE_BUCKET)
-    .upload(filePath, file, {
-      cacheControl: "3600",
-      upsert: false
-    });
-
-  if (error) {
-    throw new Error(`Upload failed: ${error.message}`);
-  }
-
-  const { data } = supabase.storage
-    .from(SUPABASE_BUCKET)
-    .getPublicUrl(filePath);
-
-  return data.publicUrl;
-}
 
 // --- UTILITIES ---
 function showToast(msg) {
@@ -66,6 +43,15 @@ function esc(str = "") {
   }[c]));
 }
 
+function safeUrl(url = "", fallback = "https://via.placeholder.com/100") {
+  const str = String(url).trim();
+  return /^https?:\/\//i.test(str) ? esc(str) : fallback;
+}
+
+function cleanPhone(phone = "") {
+  return String(phone).replace(/[^0-9]/g, "");
+}
+
 async function copyText(text) {
   try {
     await navigator.clipboard.writeText(text);
@@ -81,8 +67,44 @@ async function copyText(text) {
   }
 }
 
+// Global helper for copying Guild ID on both index.html and dashboard.html
+window.copyGuildId = async () => {
+  await copyText("3107592050");
+  showToast("Guild ID copied ✅");
+};
+
+async function uploadToSupabase(file, folder, uid) {
+  const ext = (file.name.split(".").pop() || "png").replace(/[^a-zA-Z0-9]/g, "");
+  const filePath = `${folder}/${uid}_${Date.now()}.${ext}`;
+  const uploadUrl = `${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/${filePath}`;
+
+  const res = await fetch(uploadUrl, {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      "Content-Type": file.type || "application/octet-stream",
+      "x-upsert": "true"
+    },
+    body: file
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    let message = `Upload failed (${res.status})`;
+    try {
+      const parsed = JSON.parse(errText);
+      if (parsed.message) message = `Upload failed: ${parsed.message}`;
+    } catch {}
+    throw new Error(message);
+  }
+
+  return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${filePath}`;
+}
+
 // --- ROUTER & AUTH GATE ---
 const path = window.location.pathname;
+const isLanding = path.endsWith("/") || path.endsWith("index.html");
 const isLogin = path.includes("login.html");
 const isOnboarding = path.includes("onboarding.html");
 const isAdmin = path.includes("admin.html");
@@ -102,10 +124,32 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  // 2. Login Page Logic
+  // 2. Public Landing Page (index.html) - No forced login!
+  if (isLanding) {
+    if (user) {
+      const navBtn = document.getElementById("nav-auth-btn");
+      const heroBtn = document.getElementById("hero-primary-btn");
+      const reqBtn = document.getElementById("req-cta-btn");
+      try {
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        const status = userDoc.exists() ? userDoc.data().status : null;
+        if (status === "approved") {
+          if (navBtn) { navBtn.textContent = "Dashboard"; navBtn.href = "dashboard.html"; }
+          if (heroBtn) { heroBtn.textContent = "Open Member Dashboard →"; heroBtn.href = "dashboard.html"; }
+          if (reqBtn) { reqBtn.textContent = "Go to Dashboard →"; reqBtn.href = "dashboard.html"; }
+        } else {
+          if (navBtn) { navBtn.textContent = "Application Status"; navBtn.href = "pending.html"; }
+          if (heroBtn) { heroBtn.textContent = "Check Application Status"; heroBtn.href = "pending.html"; }
+        }
+      } catch {}
+    }
+    return;
+  }
+
+  // 3. Login Page Logic
   if (isLogin) {
     if (user) {
-      window.location.href = "index.html";
+      window.location.href = "dashboard.html";
       return;
     }
     const googleBtn = document.getElementById("google-login-btn");
@@ -125,22 +169,28 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  // 3. Force Login for everything else
+  // 4. Force Login for all protected pages (dashboard.html, members.html, chat.html, profile.html, onboarding.html, pending.html)
   if (!user) {
     window.location.href = "login.html";
     return;
   }
 
-  // 4. Check User Status
+  // 5. Check User Status
   const userDoc = await getDoc(doc(db, "users", user.uid));
-  const appDoc = await getDoc(doc(db, "applications", user.uid));
+  let appExists = false;
+  try {
+    const appDoc = await getDoc(doc(db, "applications", user.uid));
+    appExists = appDoc.exists();
+  } catch {
+    appExists = false;
+  }
 
   if (!userDoc.exists()) {
-    if (!appDoc.exists() && !isOnboarding) {
+    if (!appExists && !isOnboarding) {
       window.location.href = "onboarding.html";
       return;
     }
-    if (appDoc.exists() && !isPending) {
+    if (appExists && !isPending) {
       window.location.href = "pending.html";
       return;
     }
@@ -152,21 +202,18 @@ onAuthStateChanged(auth, async (user) => {
     }
     if (status === "approved") {
       if (isPending || isOnboarding) {
-        window.location.href = "index.html";
+        window.location.href = "dashboard.html";
         return;
       }
     }
   }
 
-  // 5. Init Page Logic
-  if (isOnboarding) {
-    initOnboarding(user);
-    return;
-  }
-  if (document.getElementById("guildIdText")) initHome();
+  // 6. Init Protected Page Logic
+  if (document.getElementById("announce-list")) initDashboard();
   if (document.getElementById("member-grid")) initMembers();
   if (document.getElementById("chat-messages") && userDoc.exists()) initChat(user, userDoc.data());
   if (document.getElementById("profile-name") && userDoc.exists()) initProfile(user, userDoc.data());
+  if (isOnboarding) initOnboarding(user);
 });
 
 // ==========================================
@@ -174,7 +221,8 @@ onAuthStateChanged(auth, async (user) => {
 // ==========================================
 function initOnboarding(user) {
   const form = document.getElementById("onboardingForm");
-  if (!form) return;
+  if (!form || form.dataset.bound) return;
+  form.dataset.bound = "true";
 
   const rankOptions = document.querySelectorAll(".rank-option");
   const hiddenRankInput = document.getElementById("selectedRank");
@@ -208,16 +256,13 @@ function initOnboarding(user) {
     try {
       let photoURL = user.photoURL || "https://via.placeholder.com/100";
 
-      // Upload Profile Pic if provided
       const profileFile = form.profilePic.files[0];
       if (profileFile) {
         photoURL = await uploadToSupabase(profileFile, "profiles", user.uid);
       }
 
-      // Upload Proof Pic (required)
       const proofURL = await uploadToSupabase(proofFile, "proofs", user.uid);
 
-      // Save Application Data to Firestore
       const appData = {
         authUid: user.uid,
         email: user.email,
@@ -252,14 +297,11 @@ function initOnboarding(user) {
 }
 
 // ==========================================
-// PAGE: HOME
+// PAGE: MEMBER DASHBOARD (dashboard.html)
 // ==========================================
-function initHome() {
-  window.copyGuildId = async () => {
-    await copyText("3107592050");
-    showToast("Guild ID copied ✅");
-  };
+function initDashboard() {
   const list = document.getElementById("announce-list");
+  if (!list) return;
   getDocs(query(collection(db, "announcements"), orderBy("createdAt", "desc"), limit(3)))
     .then(snap => {
       if (snap.empty) {
@@ -270,7 +312,8 @@ function initHome() {
         <article class="announce">
           <h3>${esc(d.data().title)}</h3>
           <p>${esc(d.data().body).replace(/\n/g, "<br>")}</p>
-        </article>`).join("");
+        </article>
+      `).join("");
     });
 }
 
@@ -308,38 +351,42 @@ function initChat(user, profile) {
       const time = msg.createdAt?.toDate ? msg.createdAt.toDate().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
       return `
         <div class="chat-msg">
-          <img src="${esc(msg.photoURL || "https://via.placeholder.com/40")}" class="chat-avatar" />
+          <img src="${safeUrl(msg.photoURL)}" class="chat-avatar" />
           <div class="chat-content">
-            <span class="chat-time">${esc(time)}</span>
+            <span class="chat-time">${time}</span>
             <div class="chat-sender">${esc(msg.senderName)}</div>
             <div class="chat-text">${esc(msg.text)}</div>
           </div>
-        </div>`;
+        </div>
+      `;
     }).join("");
     chatBox.scrollTop = chatBox.scrollHeight;
   });
 
-  chatForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const text = chatInput.value.trim();
-    if (!text) return;
-    chatInput.disabled = true;
-    try {
-      await addDoc(collection(db, "chat"), {
-        text: text,
-        uid: user.uid,
-        senderName: profile.ign || user.displayName || "Member",
-        photoURL: profile.photoURL || user.photoURL || "https://via.placeholder.com/40",
-        createdAt: serverTimestamp()
-      });
-      chatInput.value = "";
-    } catch (err) {
-      showToast("Error: " + err.message);
-    } finally {
-      chatInput.disabled = false;
-      chatInput.focus();
-    }
-  });
+  if (!chatForm.dataset.bound) {
+    chatForm.dataset.bound = "true";
+    chatForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const text = chatInput.value.trim();
+      if (!text) return;
+      chatInput.disabled = true;
+      try {
+        await addDoc(collection(db, "chat"), {
+          text: text,
+          uid: user.uid,
+          senderName: profile.ign || user.displayName || "Member",
+          photoURL: profile.photoURL || "https://via.placeholder.com/100",
+          createdAt: serverTimestamp()
+        });
+        chatInput.value = "";
+      } catch (err) {
+        showToast("Error: " + err.message);
+      } finally {
+        chatInput.disabled = false;
+        chatInput.focus();
+      }
+    });
+  }
 }
 
 // ==========================================
@@ -364,7 +411,8 @@ function initMembers() {
           ${m.level ? `<span>⭐ Lv. ${esc(m.level)}</span>` : ""}
           ${m.rank ? `<span>🏆 ${esc(m.rank)}</span>` : ""}
         </div>
-      </div>`).join("");
+      </div>
+    `).join("");
   });
 }
 
@@ -373,22 +421,22 @@ function initMembers() {
 // ==========================================
 let adminListenersBound = false;
 
-async function initAdmin(u) {
+async function initAdmin(user) {
   const loginView = document.getElementById("login-view");
   const dashView = document.getElementById("dash-view");
   const loginError = document.getElementById("login-error");
+  const logoutBtn = document.getElementById("logout-btn");
 
   if (!adminListenersBound) {
     adminListenersBound = true;
 
     document.getElementById("login-form")?.addEventListener("submit", async (e) => {
       e.preventDefault();
-      loginError.style.display = "none";
       try {
         await signInWithEmailAndPassword(auth, e.target.email.value, e.target.password.value);
       } catch (err) {
         loginError.textContent = err.message;
-        loginError.style.display = "block";
+        loginError.style.display = "";
       }
     });
 
@@ -396,9 +444,7 @@ async function initAdmin(u) {
       tab.addEventListener("click", () => {
         document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
         tab.classList.add("active");
-        document.querySelectorAll(".tab-panel").forEach(p => {
-          p.style.display = "none";
-        });
+        document.querySelectorAll(".tab-panel").forEach(p => p.style.display = "none");
         const target = document.getElementById(tab.dataset.target);
         if (target) target.style.display = "block";
       });
@@ -406,45 +452,40 @@ async function initAdmin(u) {
 
     document.getElementById("announce-form")?.addEventListener("submit", async (e) => {
       e.preventDefault();
-      try {
-        await addDoc(collection(db, "announcements"), {
-          title: e.target.title.value.trim(),
-          body: e.target.body.value.trim(),
-          author: auth.currentUser.email,
-          createdAt: serverTimestamp()
-        });
-        e.target.reset();
-        showToast("Posted!");
-        loadAdminData();
-      } catch (err) {
-        showToast("Error: " + err.message);
-      }
+      await addDoc(collection(db, "announcements"), {
+        title: e.target.title.value,
+        body: e.target.body.value,
+        author: auth.currentUser.email,
+        createdAt: serverTimestamp()
+      });
+      e.target.reset();
+      showToast("Posted!");
+      loadAdminData();
     });
   }
 
-  if (!u) {
+  if (!user) {
     loginView.style.display = "";
     dashView.style.display = "none";
+    if (logoutBtn) logoutBtn.style.display = "none";
     return;
   }
 
-  const token = await u.getIdTokenResult(true);
+  const token = await user.getIdTokenResult(true);
   if (token.claims.admin !== true) {
     await signOut(auth);
     loginError.textContent = "Not an admin account.";
-    loginError.style.display = "block";
+    loginError.style.display = "";
     return;
   }
 
   loginView.style.display = "none";
   dashView.style.display = "";
-  document.getElementById("admin-email").textContent = u.email;
-  const logoutBtn = document.getElementById("logout-btn");
+  document.getElementById("admin-email").textContent = user.email;
   if (logoutBtn) logoutBtn.style.display = "block";
   loadAdminData();
 
   function loadAdminData() {
-    // 1. Load Applications
     getDocs(query(collection(db, "applications"), orderBy("createdAt", "desc"))).then(snap => {
       const tbody = document.getElementById("applications-body");
       if (snap.empty) {
@@ -453,25 +494,26 @@ async function initAdmin(u) {
       }
       tbody.innerHTML = snap.docs.map(d => {
         const a = d.data();
-        const waDigits = String(a.whatsapp || "").replace(/\D/g, "");
-        return `<tr>
-          <td><img src="${esc(a.photoURL)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover"></td>
-          <td><strong>${esc(a.ign)}</strong><br><small>${esc(a.uid)}</small></td>
-          <td><a href="https://wa.me/${waDigits}" target="_blank" rel="noopener" class="btn" style="font-size:0.7rem;padding:4px 8px;">Chat</a></td>
-          <td>${esc(a.rank)}</td>
-          <td class="status-${esc(a.status)}">${esc(a.status)}</td>
-          <td><a href="${esc(a.proofURL)}" target="_blank" rel="noopener"><img src="${esc(a.proofURL)}" class="proof-img" title="Click to view proof"></a></td>
-          <td>
-            <div class="row-actions">
-              ${a.status === "pending" ? `<button class="btn" onclick="window.approveApp('${esc(d.id)}')">Approve</button>` : ""}
-              <button class="btn-danger btn" onclick="window.delApp('${esc(d.id)}')">Delete</button>
-            </div>
-          </td>
-        </tr>`;
+        const wa = cleanPhone(a.whatsapp);
+        return `
+          <tr>
+            <td><img src="${safeUrl(a.photoURL)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;"></td>
+            <td><strong>${esc(a.ign)}</strong><br><small>${esc(a.uid)}</small></td>
+            <td><a href="https://wa.me/${wa}" target="_blank" rel="noopener" class="btn" style="font-size:0.7rem;padding:4px 8px;">Chat</a></td>
+            <td>${esc(a.rank)}</td>
+            <td class="status-${esc(a.status)}">${esc(a.status)}</td>
+            <td><a href="${safeUrl(a.proofURL)}" target="_blank" rel="noopener"><img src="${safeUrl(a.proofURL)}" class="proof-img" title="Click to view proof"></a></td>
+            <td>
+              <div class="row-actions">
+                ${a.status === "pending" ? `<button class="btn" onclick="window.approveApp('${esc(d.id)}')">Approve</button>` : ""}
+                <button class="btn-danger btn" onclick="window.delApp('${esc(d.id)}')">Delete</button>
+              </div>
+            </td>
+          </tr>
+        `;
       }).join("");
     });
 
-    // 2. Load Members
     getDocs(collection(db, "members")).then(snap => {
       const tbody = document.getElementById("members-body");
       if (snap.empty) {
@@ -480,41 +522,37 @@ async function initAdmin(u) {
       }
       tbody.innerHTML = snap.docs.map(d => {
         const m = d.data();
-        const waDigits = String(m.whatsapp || "").replace(/\D/g, "");
-        return `<tr>
-          <td>${esc(m.ign)}</td>
-          <td><strong>${esc(m.role)}</strong></td>
-          <td><a href="https://wa.me/${waDigits}" target="_blank" rel="noopener" class="btn wa-btn" style="font-size:0.7rem;padding:4px 8px;">Chat</a></td>
-          <td>${esc(m.uid)}</td>
-          <td>${esc(m.region)}</td>
-          <td>
-            <div class="row-actions">
-              <button class="btn-secondary btn" onclick="window.promoteMember('${esc(d.id)}', 'officer')">Make Officer</button>
-              <button class="btn-danger btn" onclick="window.delMember('${esc(d.id)}', '${esc(m.authUid)}')">Delete</button>
-            </div>
-          </td>
-        </tr>`;
+        const wa = cleanPhone(m.whatsapp);
+        return `
+          <tr>
+            <td>${esc(m.ign)}</td>
+            <td><strong>${esc(m.role)}</strong></td>
+            <td><a href="https://wa.me/${wa}" target="_blank" rel="noopener" class="btn wa-btn" style="font-size:0.7rem;padding:4px 8px;">Chat</a></td>
+            <td>${esc(m.uid)}</td>
+            <td>${esc(m.region)}</td>
+            <td>
+              <div class="row-actions">
+                <button class="btn-secondary btn" onclick="window.promoteMember('${esc(d.id)}', 'officer')">Make Officer</button>
+                <button class="btn-danger btn" onclick="window.delMember('${esc(d.id)}', '${esc(m.authUid)}')">Delete</button>
+              </div>
+            </td>
+          </tr>
+        `;
       }).join("");
     });
 
-    // 3. Load Announcements
     getDocs(query(collection(db, "announcements"), orderBy("createdAt", "desc"))).then(snap => {
       const list = document.getElementById("announcements-list");
-      if (snap.empty) {
-        list.innerHTML = `<div class="empty-state">No announcements posted yet.</div>`;
-        return;
-      }
       list.innerHTML = snap.docs.map(d => `
         <div class="announce" style="margin-bottom:12px">
           <h3>${esc(d.data().title)}</h3>
-          <p>${esc(d.data().body).replace(/\n/g, "<br>")}</p>
+          <p>${esc(d.data().body)}</p>
           <button class="btn-danger btn" style="margin-top:10px" onclick="window.delAnn('${esc(d.id)}')">Delete</button>
         </div>
       `).join("");
     });
   }
 
-  // --- ACTIONS ---
   window.approveApp = async (id) => {
     if (!confirm("Approve this player?")) return;
     try {
@@ -560,9 +598,7 @@ async function initAdmin(u) {
     try {
       await updateDoc(doc(db, "members", id), { role: role });
       const member = (await getDoc(doc(db, "members", id))).data();
-      if (member?.authUid) {
-        await updateDoc(doc(db, "users", member.authUid), { role: role });
-      }
+      await updateDoc(doc(db, "users", member.authUid), { role: role });
       showToast("Role updated!");
       loadAdminData();
     } catch (err) {
@@ -571,38 +607,24 @@ async function initAdmin(u) {
   };
 
   window.delApp = async (id) => {
-    if (!confirm("Delete this application?")) return;
-    try {
+    if (confirm("Delete?")) {
       await deleteDoc(doc(db, "applications", id));
-      showToast("Application deleted.");
       loadAdminData();
-    } catch (err) {
-      showToast("Error: " + err.message);
     }
   };
 
   window.delMember = async (id, authUid) => {
-    if (!confirm("Remove from roster?")) return;
-    try {
+    if (confirm("Remove from roster?")) {
       await deleteDoc(doc(db, "members", id));
-      if (authUid) {
-        await updateDoc(doc(db, "users", authUid), { status: "rejected" });
-      }
-      showToast("Member removed.");
+      await updateDoc(doc(db, "users", authUid), { status: "rejected" });
       loadAdminData();
-    } catch (err) {
-      showToast("Error: " + err.message);
     }
   };
 
   window.delAnn = async (id) => {
-    if (!confirm("Delete this announcement?")) return;
-    try {
+    if (confirm("Delete?")) {
       await deleteDoc(doc(db, "announcements", id));
-      showToast("Announcement deleted.");
       loadAdminData();
-    } catch (err) {
-      showToast("Error: " + err.message);
     }
   };
 }
