@@ -16,7 +16,7 @@ const firebaseConfig = {
 // --- SUPABASE STORAGE CONFIG ---
 const SUPABASE_URL = "https://gwzhifnghmrnvkcnjgip.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_x5taeM5x-1gNQH5oeIqhNA_wm33ZEYK";
-const SUPABASE_BUCKET = "codewix";
+const SUPABASE_BUCKET = "Codewix";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
