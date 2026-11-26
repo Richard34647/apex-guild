@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, doc, updateDoc, deleteDoc, getDoc, setDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 // --- FIREBASE CONFIG ---
 const firebaseConfig = {
@@ -16,11 +17,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
 
-// ==========================================
-// UTILITIES
-// ==========================================
+// --- UTILITIES ---
 function showToast(msg) {
   const t = document.getElementById("toast");
   if (!t) return;
@@ -28,71 +28,73 @@ function showToast(msg) {
   t.classList.add("show");
   setTimeout(() => t.classList.remove("show"), 2600);
 }
-
 function esc(str = "") {
   return String(str).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 }
-
 async function copyText(text) {
   try { await navigator.clipboard.writeText(text); return true; } 
   catch { const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); return true; }
 }
 
-// ==========================================
-// AUTH GATE & ROUTER
-// ==========================================
+// --- ROUTER & AUTH GATE ---
 const path = window.location.pathname;
 const isLogin = path.includes("login.html");
 const isOnboarding = path.includes("onboarding.html");
 const isAdmin = path.includes("admin.html");
+const isPending = path.includes("pending.html");
 
 onAuthStateChanged(auth, async (user) => {
-  // 1. Handle Logout Buttons globally
   document.querySelectorAll("#logout-btn").forEach(btn => {
     btn.onclick = (e) => { e.preventDefault(); signOut(auth); };
   });
 
-  // 2. Admin page handles its own specific login logic
+  // 1. Let Admin page handle its own custom logic
   if (isAdmin) { initAdmin(user); return; }
 
-  // 3. Handle Login Page
+  // 2. Login Page Logic
   if (isLogin) {
     if (user) { window.location.href = "index.html"; return; }
     document.getElementById("google-login-btn").onclick = async () => {
       try { await signInWithPopup(auth, googleProvider); } 
-      catch (err) { 
-        document.getElementById("login-error").textContent = err.message;
-        document.getElementById("login-error").style.display = "block";
-      }
+      catch (err) { document.getElementById("login-error").textContent = err.message; document.getElementById("login-error").style.display = "block"; }
     };
     return;
   }
 
-  // 4. Gatekeeper for everything else
+  // 3. Force Login for everything else
   if (!user) { window.location.href = "login.html"; return; }
 
+  // 4. Check User Status
   const userDoc = await getDoc(doc(db, "users", user.uid));
+  const appDoc = await getDoc(doc(db, "applications", user.uid));
 
-  // If logged in but NO PROFILE, force onboarding
   if (!userDoc.exists()) {
-    if (!isOnboarding) window.location.href = "onboarding.html";
-    else initOnboarding(user);
-    return;
+    // No user doc, no app doc -> Go to Onboarding
+    if (!appDoc.exists() && !isOnboarding) { window.location.href = "onboarding.html"; return; }
+    // Has app doc but no user doc -> Pending
+    if (appDoc.exists() && !isPending) { window.location.href = "pending.html"; return; }
+  } else {
+    // User doc exists -> Check status
+    const status = userDoc.data().status;
+    if (status === "pending") {
+      if (!isPending) window.location.href = "pending.html";
+      return;
+    }
+    if (status === "approved") {
+      if (isPending || isOnboarding) { window.location.href = "index.html"; return; }
+    }
   }
 
-  // If they HAVE a profile, and are on onboarding, send to home
-  if (isOnboarding) { window.location.href = "index.html"; return; }
-
-  // 5. Initialize Page Specific Logic
-  if (document.getElementById("applyForm")) initLanding(); // Note: apply form is removed from index, but keeping for backwards compatibility if you re-add it
+  // 5. Init Page Logic (if approved)
   if (document.getElementById("guildIdText")) initHome();
   if (document.getElementById("member-grid")) initMembers();
-  if (document.getElementById("chat-messages")) initChat(user);
+  if (document.getElementById("chat-messages")) initChat(user, userDoc.data());
   if (document.getElementById("profile-name")) initProfile(user, userDoc.data());
+  if (isOnboarding) initOnboarding(user);
 });
 
 // ==========================================
-// PAGE LOGIC: ONBOARDING
+// PAGE: ONBOARDING (With Storage Uploads)
 // ==========================================
 function initOnboarding(user) {
   const form = document.getElementById("onboardingForm");
@@ -110,52 +112,77 @@ function initOnboarding(user) {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const btn = document.getElementById("submit-btn");
-    btn.disabled = true; btn.textContent = "Saving...";
+    btn.disabled = true; btn.textContent = "Uploading Data...";
 
     try {
-      await setDoc(doc(db, "users", user.uid), {
+      let photoURL = user.photoURL || "https://via.placeholder.com/100";
+      let proofURL = "";
+
+      // Upload Profile Pic if provided
+      const profileFile = form.profilePic.files[0];
+      if (profileFile) {
+        const profileRef = ref(storage, `profiles/${user.uid}_${Date.now()}`);
+        await uploadBytes(profileRef, profileFile);
+        photoURL = await getDownloadURL(profileRef);
+      }
+
+      // Upload Proof Pic (required)
+      const proofFile = form.proofPic.files[0];
+      if (proofFile) {
+        const proofRef = ref(storage, `proofs/${user.uid}_${Date.now()}`);
+        await uploadBytes(proofRef, proofFile);
+        proofURL = await getDownloadURL(proofRef);
+      }
+
+      // Save Application Data
+      const appData = {
+        authUid: user.uid,
         email: user.email,
-        displayName: form.ign.value.trim(),
         ign: form.ign.value.trim(),
         uid: form.uid.value.trim(),
+        whatsapp: form.whatsapp.value.trim(),
         region: form.region.value,
         level: Number(form.level.value),
         role: form.role.value,
         rank: form.rank.value,
         nameTag: form.nameTag.value,
-        photoURL: user.photoURL || "https://via.placeholder.com/100",
+        photoURL: photoURL,
+        proofURL: proofURL,
+        status: "pending",
         createdAt: serverTimestamp()
-      });
-      window.location.href = "index.html";
+      };
+
+      await setDoc(doc(db, "applications", user.uid), appData);
+      
+      // Create a pending user doc to track them
+      await setDoc(doc(db, "users", user.uid), { status: "pending", email: user.email });
+      
+      window.location.href = "pending.html";
     } catch (err) {
       showToast("Error: " + err.message);
-      btn.disabled = false; btn.textContent = "Save & Enter Guild";
+      btn.disabled = false; btn.textContent = "Submit Application";
     }
   });
 }
 
 // ==========================================
-// PAGE LOGIC: HOME (index.html)
+// PAGE: HOME
 // ==========================================
 function initHome() {
   window.copyGuildId = async () => { await copyText("3107592050"); showToast("Guild ID copied ✅"); };
-  
   const list = document.getElementById("announce-list");
   getDocs(query(collection(db, "announcements"), orderBy("createdAt", "desc"), limit(3)))
     .then(snap => {
       if (snap.empty) { list.innerHTML = `<div class="empty-state">No announcements yet.</div>`; return; }
-      list.innerHTML = snap.docs.map(d => {
-        const a = d.data();
-        return `<article class="announce"><h3>${esc(a.title)}</h3><p>${esc(a.body).replace(/\n/g, "<br>")}</p></article>`;
-      }).join("");
-    }).catch(() => { list.innerHTML = `<div class="empty-state">Error loading news.</div>`; });
+      list.innerHTML = snap.docs.map(d => `<article class="announce"><h3>${esc(d.data().title)}</h3><p>${esc(d.data().body).replace(/\n/g, "<br>")}</p></article>`).join("");
+    });
 }
 
 // ==========================================
-// PAGE LOGIC: PROFILE
+// PAGE: PROFILE
 // ==========================================
 function initProfile(user, data) {
-  document.getElementById("profile-avatar").src = data.photoURL || "https://via.placeholder.com/100";
+  document.getElementById("profile-avatar").src = data.photoURL;
   document.getElementById("profile-name").textContent = data.ign;
   document.getElementById("profile-email").textContent = data.email;
   document.getElementById("p-ign").textContent = data.ign;
@@ -167,29 +194,20 @@ function initProfile(user, data) {
 }
 
 // ==========================================
-// PAGE LOGIC: CHAT
+// PAGE: CHAT
 // ==========================================
-function initChat(user) {
+function initChat(user, profile) {
   const chatBox = document.getElementById("chat-messages");
   const chatForm = document.getElementById("chat-form");
   const chatInput = document.getElementById("chat-input");
 
   const q = query(collection(db, "chat"), orderBy("createdAt", "asc"), limit(50));
   onSnapshot(q, (snapshot) => {
-    if (snapshot.empty) { chatBox.innerHTML = `<div class="empty-state">No messages yet. Say hi!</div>`; return; }
+    if (snapshot.empty) { chatBox.innerHTML = `<div class="empty-state">No messages yet.</div>`; return; }
     chatBox.innerHTML = snapshot.docs.map(doc => {
       const msg = doc.data();
       const time = msg.createdAt?.toDate ? msg.createdAt.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "";
-      return `
-        <div class="chat-msg">
-          <img src="${msg.photoURL || 'https://via.placeholder.com/40'}" class="chat-avatar" />
-          <div class="chat-content">
-            <span class="chat-time">${time}</span>
-            <div class="chat-sender">${esc(msg.senderName || "Member")}</div>
-            <div class="chat-text">${esc(msg.text)}</div>
-          </div>
-        </div>
-      `;
+      return `<div class="chat-msg"><img src="${msg.photoURL}" class="chat-avatar" /><div class="chat-content"><span class="chat-time">${time}</span><div class="chat-sender">${esc(msg.senderName)}</div><div class="chat-text">${esc(msg.text)}</div></div></div>`;
     }).join("");
     chatBox.scrollTop = chatBox.scrollHeight;
   });
@@ -200,14 +218,8 @@ function initChat(user) {
     if (!text) return;
     chatInput.disabled = true;
     try {
-      const userSnap = await getDoc(doc(db, "users", user.uid));
-      const profile = userSnap.data();
       await addDoc(collection(db, "chat"), {
-        text: text,
-        uid: user.uid,
-        senderName: profile.ign || user.displayName,
-        photoURL: profile.photoURL || user.photoURL || "",
-        createdAt: serverTimestamp()
+        text: text, uid: user.uid, senderName: profile.ign || user.displayName, photoURL: profile.photoURL, createdAt: serverTimestamp()
       });
       chatInput.value = "";
     } catch (err) { showToast("Error: " + err.message); } 
@@ -216,7 +228,7 @@ function initChat(user) {
 }
 
 // ==========================================
-// PAGE LOGIC: MEMBERS
+// PAGE: MEMBERS
 // ==========================================
 function initMembers() {
   const ROLE_ORDER = { leader: 0, coleader: 1, officer: 2, member: 3, recruit: 4 };
@@ -228,7 +240,6 @@ function initMembers() {
     members.sort((a, b) => ((ROLE_ORDER[a.role] ?? 9) - (ROLE_ORDER[b.role] ?? 9)) || (a.ign || "").localeCompare(b.ign || ""));
     const grid = document.getElementById("member-grid");
     document.getElementById("member-count").textContent = `${members.length} members`;
-    if (!members.length) { grid.innerHTML = `<div class="empty-state">No members yet.</div>`; return; }
     grid.innerHTML = members.map(m => `
       <div class="card">
         <span class="role-tag ${roleClass(m.role)}">${roleLabel(m.role)}</span>
@@ -243,66 +254,75 @@ function initMembers() {
 }
 
 // ==========================================
-// ADMIN LOGIC (admin.html) - Preserved
+// PAGE: ADMIN (Fixed Logic & New Tables)
 // ==========================================
 function initAdmin(user) {
   const checkAdmin = async (u) => { if (!u) return false; const token = await u.getIdTokenResult(true); return token.claims.admin === true; };
 
   onAuthStateChanged(auth, async (u) => {
-    if (!u) { showAdminLogin(); return; }
-    if (!(await checkAdmin(u))) { await signOut(auth); showAdminLogin("Not an admin account."); return; }
+    if (!u) { document.getElementById("login-view").style.display = ""; document.getElementById("dash-view").style.display = "none"; return; }
+    if (!(await checkAdmin(u))) { await signOut(auth); document.getElementById("login-error").textContent = "Not an admin account."; document.getElementById("login-error").style.display = ""; return; }
     
     document.getElementById("login-view").style.display = "none";
     document.getElementById("dash-view").style.display = "";
     document.getElementById("admin-email").textContent = u.email;
+    document.getElementById("logout-btn").style.display = "block";
     loadAdminData();
   });
 
   document.getElementById("login-form")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     try { await signInWithEmailAndPassword(auth, e.target.email.value, e.target.password.value); } 
-    catch (err) { showAdminLogin(err.message); }
+    catch (err) { document.getElementById("login-error").textContent = err.message; document.getElementById("login-error").style.display = ""; }
   });
 
-  function showAdminLogin(msg = "") {
-    document.getElementById("login-view").style.display = "";
-    document.getElementById("dash-view").style.display = "none";
-    if (msg) { document.getElementById("login-error").textContent = msg; document.getElementById("login-error").style.display = ""; }
-  }
-
   function loadAdminData() {
-    // Load Apps
+    // 1. Load Applications
     getDocs(query(collection(db, "applications"), orderBy("createdAt", "desc"))).then(snap => {
       const tbody = document.getElementById("applications-body");
-      if (snap.empty) { tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">No applications.</div></td></tr>`; return; }
+      if (snap.empty) { tbody.innerHTML = `<tr><td colspan="7">No applications.</td></tr>`; return; }
       tbody.innerHTML = snap.docs.map(d => {
         const a = d.data();
         return `<tr>
-          <td>${esc(a.ign)}</td><td>${esc(a.uid)}</td><td>${a.level}</td>
-          <td>${esc(a.role)}</td><td>${esc(a.region)}</td>
+          <td><img src="${a.photoURL}" style="width:40px;height:40px;border-radius:50%"></td>
+          <td><strong>${esc(a.ign)}</strong><br><small>${esc(a.uid)}</small></td>
+          <td><a href="https://wa.me/${esc(a.whatsapp)}" target="_blank" class="btn" style="font-size:0.7rem;padding:4px 8px;">Chat</a></td>
+          <td>${esc(a.rank)}</td>
           <td class="status-${a.status}">${a.status}</td>
-          <td><div class="row-actions">
-            ${a.status === "pending" ? `<button class="btn" onclick="window.markOfficial('${d.id}')">Mark Official</button>` : ""}
-            <button class="btn-danger btn" onclick="window.delApp('${d.id}')">Delete</button>
-          </div></td>
+          <td><a href="${a.proofURL}" target="_blank"><img src="${a.proofURL}" class="proof-img" title="Click to view proof"></a></td>
+          <td>
+            <div class="row-actions">
+              ${a.status === "pending" ? `<button class="btn" onclick="window.approveApp('${d.id}')">Approve</button>` : ""}
+              <button class="btn-danger btn" onclick="window.delApp('${d.id}')">Delete</button>
+            </div>
+          </td>
         </tr>`;
       }).join("");
     });
 
-    // Load Members
+    // 2. Load Members
     getDocs(collection(db, "members")).then(snap => {
       const tbody = document.getElementById("members-body");
+      if (snap.empty) { tbody.innerHTML = `<tr><td colspan="6">No members.</td></tr>`; return; }
       tbody.innerHTML = snap.docs.map(d => {
         const m = d.data();
         return `<tr>
-          <td>${esc(m.ign)}</td><td>${esc(m.role)}</td><td>${esc(m.uid)}</td>
-          <td>${esc(m.region)}</td><td>${m.level || ""}</td><td>${esc(m.rank || "—")}</td>
-          <td><button class="btn-danger btn" onclick="window.delMember('${d.id}')">Delete</button></td>
+          <td>${esc(m.ign)}</td>
+          <td><strong>${esc(m.role)}</strong></td>
+          <td><a href="https://wa.me/${esc(m.whatsapp)}" target="_blank" class="btn wa-btn" style="font-size:0.7rem;padding:4px 8px;">Chat</a></td>
+          <td>${esc(m.uid)}</td>
+          <td>${esc(m.region)}</td>
+          <td>
+            <div class="row-actions">
+              <button class="btn-secondary btn" onclick="window.promoteMember('${d.id}', 'officer')">Make Officer</button>
+              <button class="btn-danger btn" onclick="window.delMember('${d.id}', '${m.authUid}')">Delete</button>
+            </div>
+          </td>
         </tr>`;
       }).join("");
     });
 
-    // Load Announcements
+    // 3. Load Announcements
     getDocs(query(collection(db, "announcements"), orderBy("createdAt", "desc"))).then(snap => {
       const list = document.getElementById("announcements-list");
       list.innerHTML = snap.docs.map(d => `
@@ -314,33 +334,51 @@ function initAdmin(user) {
     });
   }
 
-  window.markOfficial = async (id) => {
-    if (!confirm("Add to public roster?")) return;
+  // --- ACTIONS ---
+  window.approveApp = async (id) => {
+    if (!confirm("Approve this player?")) return;
     const appSnap = await getDoc(doc(db, "applications", id));
     const a = appSnap.data();
-    await addDoc(collection(db, "members"), { ign: a.ign, uid: a.uid, role: "member", region: a.region, level: a.level, rank: a.rank, joinedAt: serverTimestamp() });
-    await updateDoc(doc(db, "applications", id), { status: "official" });
-    showToast("Added to roster!"); loadAdminData();
+    
+    // 1. Move to Members
+    await setDoc(doc(db, "members", id), {
+      authUid: a.authUid, ign: a.ign, uid: a.uid, role: "member", region: a.region, 
+      level: a.level, rank: a.rank, whatsapp: a.whatsapp, photoURL: a.photoURL, joinedAt: serverTimestamp()
+    });
+    
+    // 2. Update User status so they can enter the site
+    await setDoc(doc(db, "users", a.authUid), { 
+      status: "approved", ign: a.ign, email: a.email, photoURL: a.photoURL, uid: a.uid, region: a.region, level: a.level, rank: a.rank, role: "member", whatsapp: a.whatsapp 
+    });
+    
+    // 3. Delete the application
+    await deleteDoc(doc(db, "applications", id));
+    
+    showToast("Approved and added to roster!"); loadAdminData();
   };
+
+  window.promoteMember = async (id, role) => {
+    if (!confirm(`Change role to ${role}?`)) return;
+    await updateDoc(doc(db, "members", id), { role: role });
+    const member = (await getDoc(doc(db, "members", id))).data();
+    await updateDoc(doc(db, "users", member.authUid), { role: role });
+    showToast("Role updated!"); loadAdminData();
+  };
+
   window.delApp = async (id) => { if(confirm("Delete?")) { await deleteDoc(doc(db, "applications", id)); loadAdminData(); } };
-  window.delMember = async (id) => { if(confirm("Remove from roster?")) { await deleteDoc(doc(db, "members", id)); loadAdminData(); } };
+  window.delMember = async (id, authUid) => { 
+    if(confirm("Remove from roster?")) { 
+      await deleteDoc(doc(db, "members", id)); 
+      await updateDoc(doc(db, "users", authUid), { status: "rejected" });
+      loadAdminData(); 
+    } 
+  };
   window.delAnn = async (id) => { if(confirm("Delete?")) { await deleteDoc(doc(db, "announcements", id)); loadAdminData(); } };
 
-  document.getElementById("member-form")?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    await addDoc(collection(db, "members"), {
-      ign: e.target.ign.value, uid: e.target.uid.value, role: e.target.role.value,
-      region: e.target.region.value, level: Number(e.target.level.value) || null,
-      realName: e.target.realName.value, joinedAt: serverTimestamp()
-    });
-    e.target.reset(); showToast("Member added"); loadAdminData();
-  });
-
+  // Forms
   document.getElementById("announce-form")?.addEventListener("submit", async (e) => {
     e.preventDefault();
-    await addDoc(collection(db, "announcements"), {
-      title: e.target.title.value, body: e.target.body.value, author: auth.currentUser.email, createdAt: serverTimestamp()
-    });
+    await addDoc(collection(db, "announcements"), { title: e.target.title.value, body: e.target.body.value, author: auth.currentUser.email, createdAt: serverTimestamp() });
     e.target.reset(); showToast("Posted!"); loadAdminData();
   });
 }
