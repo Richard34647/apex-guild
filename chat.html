@@ -6,6 +6,21 @@
   <title>Guild Chat · 么・APEX・么</title>
   <link rel="stylesheet" href="style.css">
   <link rel="icon" type="image/svg+xml" href="/Neon Panther APEX Shield Emblem.png">
+  <style>
+    .chat-sender-link { cursor: pointer; transition: color 0.15s; }
+    .chat-sender-link:hover { color: var(--green, #39ff14); text-decoration: underline; }
+    .chat-avatar-link { cursor: pointer; }
+    .chat-attachment { max-width: 240px; max-height: 220px; border-radius: 10px; margin-top: 6px; display: block; border: 1px solid var(--border, #232b36); cursor: pointer; }
+    .chat-img-btn { background: var(--card-2, #161d26); border: 1px solid var(--border, #232b36); color: var(--text, #fff); border-radius: 10px; padding: 0 14px; cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; }
+    .chat-img-btn:hover { border-color: var(--green, #39ff14); }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.82); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 16px; }
+    .profile-modal-card { background: var(--card, #11161d); border: 1px solid var(--border, #232b36); border-radius: 16px; max-width: 380px; width: 100%; padding: 24px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.7); }
+    .profile-modal-avatar { width: 84px; height: 84px; border-radius: 50%; object-fit: cover; border: 2px solid var(--green, #39ff14); margin-bottom: 12px; }
+    .profile-modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; margin: 16px 0; }
+    .profile-modal-item { background: #090c10; border: 1px solid var(--border, #232b36); border-radius: 10px; padding: 10px; }
+    .profile-modal-item small { display: block; color: var(--muted, #8b949e); font-size: 0.72rem; text-transform: uppercase; }
+    .profile-modal-item strong { font-size: 0.92rem; }
+  </style>
 </head>
 <body>
   <header>
@@ -23,18 +38,27 @@
 
   <section style="padding-top: 40px;">
     <h2 class="section-title">Guild <span>Chat</span></h2>
-    <p class="section-sub">Talk with the squad in real-time.</p>
+    <p class="section-sub">Talk with the squad in real-time. Click any player's name to inspect their profile.</p>
 
     <div class="chat-container">
       <div class="chat-messages" id="chat-messages">
         <div class="empty-state">Connecting...</div>
       </div>
       <form id="chat-form" class="chat-input-area">
-        <input type="text" id="chat-input" placeholder="Type a message..." maxlength="500" required autocomplete="off" />
+        <input type="file" id="chat-image-input" accept="image/*" style="display:none;" />
+        <button type="button" id="chat-image-btn" class="chat-img-btn" title="Attach screenshot">📷</button>
+        <input type="text" id="chat-input" placeholder="Type a message or paste a clip link..." maxlength="500" autocomplete="off" />
         <button type="submit" class="btn-submit" style="width:auto; margin:0;">Send</button>
       </form>
     </div>
   </section>
+
+  <!-- Player Profile Inspection Modal -->
+  <div id="user-profile-modal" class="modal-backdrop" onclick="if(event.target===this) window.closeUserProfileModal()">
+    <div class="profile-modal-card" id="user-profile-modal-content">
+      <div class="empty-state">Loading player profile...</div>
+    </div>
+  </div>
 
   <div class="toast" id="toast"></div>
   <script type="module" src="app.js"></script>

@@ -6,6 +6,10 @@
   <title>么・APEX・么 | Official Free Fire Guild</title>
   <link rel="stylesheet" href="style.css">
   <link rel="icon" type="image/svg+xml" href="/Neon Panther APEX Shield Emblem.png">
+  <style>
+    .leader-header { display: flex; align-items: center; gap: 14px; margin: 12px 0; }
+    .leader-avatar { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid var(--green, #39ff14); background: #090c10; flex-shrink: 0; }
+  </style>
 </head>
 <body>
   <header>
@@ -66,7 +70,13 @@
     <div class="grid-3">
       <div class="card">
         <span class="role-tag role-leader">Guild Leader • Rusher</span>
-        <div class="ign">RỊCH.ĀRD.</div>
+        <div class="leader-header">
+          <img id="leader-photo" src="/Neon Panther APEX Shield Emblem.png" alt="Guild Leader" class="leader-avatar" onerror="this.src='https://via.placeholder.com/64/11161d/39ff14?text=APEX'" />
+          <div>
+            <div class="ign" id="leader-ign" style="margin:0;">RỊCH.ĀRD.</div>
+            <small id="leader-meta" style="color:var(--muted);">Guild Founder</small>
+          </div>
+        </div>
         <p>Aggressive frontline rusher & content creator. Leading squad rotations and weekly custom rooms.</p>
       </div>
       <div class="card">

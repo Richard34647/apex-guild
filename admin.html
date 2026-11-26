@@ -8,19 +8,13 @@
   <style>
     .proof-img { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; cursor: pointer; border: 1px solid var(--border); }
     .proof-img:hover { border-color: var(--green); }
-    .btn-review { background: rgba(57, 255, 20, 0.12); color: var(--green); border: 1px solid var(--green); }
-    .btn-review:hover { background: var(--green); color: #000; }
-    .modal-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.78); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
-    .modal-backdrop.open { display: flex; }
-    .modal-card { background: var(--card, #11161d); border: 1px solid var(--border, #232b36); border-radius: 14px; max-width: 520px; width: 100%; padding: 22px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-    .modal-header h3 { margin: 0; font-size: 1.15rem; }
-    .modal-close { background: none; border: none; color: var(--muted, #8b949e); font-size: 1.4rem; cursor: pointer; }
-    .stat-compare { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 0.9rem; }
-    .stat-compare th, .stat-compare td { padding: 8px 10px; border-bottom: 1px solid var(--border, #232b36); text-align: left; }
-    .stat-compare th { color: var(--muted, #8b949e); font-weight: 600; }
-    .stat-live { color: var(--green, #39ff14); font-weight: 700; }
-    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; flex-wrap: wrap; }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.82); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 16px; }
+    .modal-card { background: var(--card, #11161d); border: 1px solid var(--border, #232b36); border-radius: 14px; max-width: 480px; width: 100%; padding: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); }
+    .stat-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; font-size: 0.9rem; }
+    .stat-box { background: #090c10; border: 1px solid var(--border, #232b36); border-radius: 10px; padding: 12px; }
+    .stat-box h4 { margin: 0 0 8px; font-size: 0.78rem; text-transform: uppercase; color: var(--muted, #8b949e); }
+    .stat-box p { margin: 4px 0; }
+    .leader-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
   </style>
 </head>
 <body>
@@ -28,8 +22,8 @@
     <div class="nav-container">
       <div class="brand">么・APEX・么 · Admin</div>
       <nav class="nav-links">
-        <a href="index.html">Site</a>
         <a href="dashboard.html">Dashboard</a>
+        <a href="index.html">Public Site</a>
         <a href="#" id="logout-btn" style="display:none">Sign Out</a>
       </nav>
     </div>
@@ -52,23 +46,61 @@
       <p class="section-sub">Signed in as <span id="admin-email" style="color:var(--green)"></span></p>
       <div class="tabs">
         <button class="tab active" data-target="tab-applications">Applications</button>
-        <button class="tab" data-target="tab-members">Members</button>
+        <button class="tab" data-target="tab-members">Members & Leadership</button>
         <button class="tab" data-target="tab-announcements">Announcements</button>
       </div>
 
       <div id="tab-applications" class="tab-panel">
         <div class="table-wrap">
           <table class="data">
-            <thead><tr><th>Pic</th><th>IGN / UID</th><th>WhatsApp</th><th>Rank / Lv</th><th>Status</th><th>Proof</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Pic</th><th>IGN</th><th>WhatsApp</th><th>Rank</th><th>Status</th><th>Proof</th><th>Actions</th></tr></thead>
             <tbody id="applications-body"></tbody>
           </table>
         </div>
       </div>
 
       <div id="tab-members" class="tab-panel" style="display:none">
+        <div class="sub-form" style="margin-bottom: 24px;">
+          <h3 style="margin-top:0; margin-bottom: 12px; color: var(--green);">Add / Set Guild Leader or Member</h3>
+          <form id="add-leader-form">
+            <div class="leader-form-grid">
+              <div class="form-group"><label>Free Fire IGN *</label><input type="text" name="ign" placeholder="e.g. RỊCH.ĀRD." required /></div>
+              <div class="form-group"><label>Free Fire UID *</label><input type="text" name="uid" placeholder="e.g. 123456789" required /></div>
+              <div class="form-group">
+                <label>Role *</label>
+                <select name="role" required>
+                  <option value="leader">Guild Leader</option>
+                  <option value="coleader">Co-Leader</option>
+                  <option value="officer">Officer</option>
+                  <option value="member">Member</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Region *</label>
+                <select name="region" required>
+                  <option value="NG">NG / MENA</option><option>SG</option><option>IND</option><option>ID</option><option>BR</option><option>NA</option><option>EU</option><option>MENA</option><option>PK</option><option>BD</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Level</label><input type="number" name="level" value="70" min="1" max="100" /></div>
+              <div class="form-group">
+                <label>BR Rank</label>
+                <select name="rank">
+                  <option>Heroic</option><option>Elite Heroic</option><option>Master</option><option>Elite Master</option><option>Grandmaster</option><option>Diamond</option><option>Platinum</option><option>Gold</option>
+                </select>
+              </div>
+              <div class="form-group"><label>WhatsApp Number</label><input type="tel" name="whatsapp" placeholder="2348012345678" /></div>
+              <div class="form-group"><label>Leader / Member Photo</label><input type="file" name="photoFile" accept="image/*" /></div>
+            </div>
+            <label style="display:flex; align-items:center; gap:8px; margin: 10px 0 14px; font-size:0.85rem; cursor:pointer;">
+              <input type="checkbox" name="linkMyAccount" checked /> Link to my currently signed-in admin account (so my profile & chat show this info)
+            </label>
+            <button type="submit" class="btn-submit" id="save-leader-btn">Save to Roster</button>
+          </form>
+        </div>
+
         <div class="table-wrap">
           <table class="data">
-            <thead><tr><th>IGN</th><th>Role</th><th>WhatsApp</th><th>UID</th><th>Region / Lv</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Pic</th><th>IGN</th><th>Role</th><th>WhatsApp</th><th>UID</th><th>Region</th><th>Actions</th></tr></thead>
             <tbody id="members-body"></tbody>
           </table>
         </div>
@@ -87,17 +119,15 @@
     </div>
   </div>
 
-  <!-- GamesKinbo Live Stats Review Modal -->
-  <div class="modal-backdrop" id="review-modal">
+  <!-- GamesKinbo Review / Sync Modal -->
+  <div id="stats-modal" class="modal-backdrop">
     <div class="modal-card">
-      <div class="modal-header">
-        <h3 id="review-modal-title">Player Stats Review</h3>
-        <button class="modal-close" id="close-review-modal" aria-label="Close">&times;</button>
+      <h3 style="margin-top:0; color:var(--green);" id="modal-title">Player Verification</h3>
+      <p style="font-size:0.85rem; color:var(--muted);" id="modal-sub">Fetching live Free Fire data...</p>
+      <div id="modal-body"></div>
+      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:18px; flex-wrap:wrap;" id="modal-actions">
+        <button type="button" class="btn-secondary btn" onclick="window.closeStatsModal()">Close</button>
       </div>
-      <div id="review-modal-body">
-        <p style="color:var(--muted)">Fetching live Garena Free Fire data...</p>
-      </div>
-      <div class="modal-actions" id="review-modal-actions"></div>
     </div>
   </div>
 
