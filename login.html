@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login · 么・APEX・么</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body style="display: flex; align-items: center; justify-content: center; height: 100vh; background: radial-gradient(circle at top, rgba(57,255,20,0.12), transparent 60%), var(--bg);">
+  
+  <div class="form-card" style="text-align: center; max-width: 400px; width: 90%;">
+    <div class="logo-wrap" style="margin-bottom: 20px;">
+      <img src="/logo.png" alt="Logo" onerror="this.style.display='none'; this.parentElement.innerHTML='<span style=\'color:#39ff14;font-weight:900;font-size:1.3rem;\'>么・APEX・么</span>';" />
+    </div>
+    <h1>么・APEX・么</h1>
+    <p class="section-sub">Sign in to access the guild.</p>
+    
+    <button id="google-login-btn" class="btn-submit" style="display: flex; align-items: center; justify-content: center; gap: 10px; background: #fff; color: #333;">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width: 20px;" />
+      Sign in with Google
+    </button>
+    <p id="login-error" style="color: var(--red); margin-top: 10px; font-size: 0.9rem; display: none;"></p>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
