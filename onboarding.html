@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Complete Profile · 么・APEX・么</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .rank-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 10px; margin-bottom: 20px; }
+    .rank-option { background: var(--card-2); border: 2px solid var(--border); border-radius: 12px; padding: 10px; text-align: center; cursor: pointer; transition: 0.2s; }
+    .rank-option:hover { border-color: var(--green); }
+    .rank-option.selected { border-color: var(--green); background: rgba(57,255,20,0.1); box-shadow: 0 0 15px rgba(57,255,20,0.2); }
+    .rank-option img { width: 50px; height: 50px; object-fit: contain; margin-bottom: 5px; }
+    .rank-option span { font-size: 0.7rem; display: block; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="nav-container">
+      <div class="brand">么・APEX・么</div>
+      <nav class="nav-links">
+        <a href="#" id="logout-btn">Logout</a>
+      </nav>
+    </div>
+  </header>
+
+  <section style="padding-top: 40px;">
+    <h2 class="section-title">Complete your <span>Profile</span></h2>
+    <p class="section-sub">We need your Free Fire details before you can enter the guild site.</p>
+
+    <div class="form-card">
+      <form id="onboardingForm">
+        <div class="form-group"><label>Free Fire IGN *</label><input type="text" name="ign" required /></div>
+        <div class="form-group"><label>Free Fire UID *</label><input type="text" name="uid" required /></div>
+        <div class="form-group">
+          <label>Region *</label>
+          <select name="region" required>
+            <option value="">Select region</option><option>SG</option><option>IND</option><option>ID</option><option>BR</option><option>NA</option><option>EU</option><option>RU</option><option>MENA</option><option>PK</option><option>BD</option><option>TH</option><option>VN</option><option>MY</option><option>ME</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Account Level *</label><input type="number" name="level" min="1" max="100" required /></div>
+        <div class="form-group">
+          <label>Preferred Role *</label>
+          <select name="role" required>
+            <option value="">Select role</option><option>Rusher</option><option>Sniper</option><option>Support</option><option>IGL / Strategist</option><option>Flexible</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Optional Name Tag</label>
+          <select name="nameTag"><option value="none">No tag</option><option value="么・">么・</option><option value="APX・">APX・</option></select>
+        </div>
+
+        <label>Current BR Rank *</label>
+        <input type="hidden" name="rank" id="selectedRank" required />
+        <div class="rank-grid">
+          <!-- Real Free Fire Rank Images (Public CDN) -->
+          <div class="rank-option" data-rank="Bronze"><img src="https://raw.githubusercontent.com/iamsahil1910/FreeFire-Ranks/main/Bronze.png" onerror="this.src='https://via.placeholder.com/50/8b4513/fff?text=B'"><span>Bronze</span></div>
+          <div class="rank-option" data-rank="Silver"><img src="https://raw.githubusercontent.com/iamsahil1910/FreeFire-Ranks/main/Silver.png" onerror="this.src='https://via.placeholder.com/50/c0c0c0/fff?text=S'"><span>Silver</span></div>
+          <div class="rank-option" data-rank="Gold"><img src="https://raw.githubusercontent.com/iamsahil1910/FreeFire-Ranks/main/Gold.png" onerror="this.src='https://via.placeholder.com/50/ffd700/fff?text=G'"><span>Gold</span></div>
+          <div class="rank-option" data-rank="Platinum"><img src="https://raw.githubusercontent.com/iamsahil1910/FreeFire-Ranks/main/Platinum.png" onerror="this.src='https://via.placeholder.com/50/00ffff/fff?text=P'"><span>Platinum</span></div>
+          <div class="rank-option" data-rank="Diamond"><img src="https://raw.githubusercontent.com/iamsahil1910/FreeFire-Ranks/main/Diamond.png" onerror="this.src='https://via.placeholder.com/50/0000ff/fff?text=D'"><span>Diamond</span></div>
+          <div class="rank-option" data-rank="Heroic"><img src="https://raw.githubusercontent.com/iamsahil1910/FreeFire-Ranks/main/Heroic.png" onerror="this.src='https://via.placeholder.com/50/ff0000/fff?text=H'"><span>Heroic</span></div>
+          <div class="rank-option" data-rank="Elite Heroic"><img src="https://raw.githubusercontent.com/iamsahil1910/FreeFire-Ranks/main/Elite_Heroic.png" onerror="this.src='https://via.placeholder.com/50/ff00ff/fff?text=EH'"><span>Elite Heroic</span></div>
+          <div class="rank-option" data-rank="Master"><img src="https://raw.githubusercontent.com/iamsahil1910/FreeFire-Ranks/main/Master.png" onerror="this.src='https://via.placeholder.com/50/800080/fff?text=M'"><span>Master</span></div>
+          <div class="rank-option" data-rank="Elite Master"><img src="https://raw.githubusercontent.com/iamsahil1910/FreeFire-Ranks/main/Elite_Master.png" onerror="this.src='https://via.placeholder.com/50/ff8c00/fff?text=EM'"><span>Elite Master</span></div>
+          <div class="rank-option" data-rank="Grandmaster"><img src="https://raw.githubusercontent.com/iamsahil1910/FreeFire-Ranks/main/Grandmaster.png" onerror="this.src='https://via.placeholder.com/50/ffd700/000?text=GM'"><span>Grandmaster</span></div>
+        </div>
+
+        <button type="submit" class="btn-submit" id="submit-btn">Save & Enter Guild</button>
+      </form>
+    </div>
+  </section>
+
+  <div class="toast" id="toast"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
